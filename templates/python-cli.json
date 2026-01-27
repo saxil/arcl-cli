@@ -1,19 +1,19 @@
 {
-  "name": "python-script",
+  "name": "python-cli",
   "language": "python",
-  "description": "Python command-line script",
-  "detect": ["python", "script", "cli", "command"],
+  "description": "Python command-line application",
+  "detect": ["python cli", "command line", "argparse", "terminal", "console"],
   "structure": [
     "README.md",
     "requirements.txt",
     ".gitignore",
-    "main.py"
+    "src/main.py"
   ],
   "fileDescriptions": {
     "README.md": "Script documentation and usage",
     "requirements.txt": "Python package dependencies",
     ".gitignore": "Git ignore file for Python projects",
-    "main.py": "Main script entry point"
+    "src/main.py": "Main CLI entry point with argument parsing"
   },
   "venv": true
 }

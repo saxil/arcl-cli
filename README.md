@@ -214,13 +214,19 @@ Templates live in `templates/` as JSON files:
 
 Available templates:
 - `python-tkinter` — Tkinter GUI app
+- `python-fastapi` — FastAPI web application
 - `python-flask` — Flask web server
-- `python-cli` — CLI script
+- `python-cli` — Python CLI application
 - `node-express` — Express.js server
 - `node-cli` — Node.js CLI tool
 - `react-vite` — React app with Vite
 - `web-static` — HTML/CSS/JS site
 - `generic` — Fallback
+
+Use `--template <name>` to explicitly select a template:
+```bash
+glm create project --template python-fastapi "REST API for users"
+```
 
 ## Change History
 

@@ -88,6 +88,7 @@ TRANSACTIONAL COMMANDS (single-file, safe):
 
 PROJECT CREATION (template-based):
   glm create project "<description>"
+  glm create project --template <name> "<description>"
   glm templates                      List available templates
 
 READ-ONLY (understand code):
@@ -95,6 +96,7 @@ READ-ONLY (understand code):
 
 FLAGS:
   --dry-run                          Preview changes without applying
+  --template <name>                  Use specific template for project
 
 UTILITIES:
   glm ls                             List directory contents
@@ -106,8 +108,8 @@ EXAMPLES:
   glm edit main.py "add error handling"
   glm edit --dry-run main.py "add logging"
   glm ask src/main.py "explain the main function"
-  glm ask . "summarize this project"
   glm create project "a calculator app using tkinter"
+  glm create project --template python-fastapi "REST API for users"
 
 WORKSPACE: ${workspaceRoot}
 `);
@@ -358,16 +360,17 @@ async function removeCommand(filePath) {
 // ─────────────────────────────────────────────────────────────
 
 async function createProjectCommand(description, options = {}) {
-  const { dryRun = false } = options;
+  const { dryRun = false, template = null } = options;
   
   if (!description) {
     console.error('Error: Project description required');
     console.error('Usage: glm create project "<description>"');
+    console.error('       glm create project --template <name> "<description>"');
     return 1;
   }
 
-  // Plan the project (now returns {success, plan, error})
-  const planResult = planProject(description);
+  // Plan the project with optional explicit template
+  const planResult = planProject(description, template);
   if (!planResult.success) {
     console.error(`Error: ${planResult.error}`);
     return 1;
@@ -702,19 +705,34 @@ function templatesCommand() {
 // ─────────────────────────────────────────────────────────────
 
 /**
- * Parses --dry-run flag from args and returns cleaned args.
+ * Parses flags from args and returns cleaned args.
  * @param {string[]} args 
- * @returns {{args: string[], dryRun: boolean}}
+ * @returns {{args: string[], dryRun: boolean, template: string|null}}
  */
 function parseFlags(args) {
   const dryRun = args.includes('--dry-run');
-  const cleanedArgs = args.filter(a => a !== '--dry-run');
-  return { args: cleanedArgs, dryRun };
+  
+  // Extract --template <name>
+  let template = null;
+  const templateIdx = args.indexOf('--template');
+  if (templateIdx !== -1 && args[templateIdx + 1]) {
+    template = args[templateIdx + 1];
+  }
+  
+  // Remove flags from args
+  const cleanedArgs = args.filter((a, i) => {
+    if (a === '--dry-run') return false;
+    if (a === '--template') return false;
+    if (i > 0 && args[i - 1] === '--template') return false;
+    return true;
+  });
+  
+  return { args: cleanedArgs, dryRun, template };
 }
 
 async function main() {
   const rawArgs = process.argv.slice(2);
-  const { args, dryRun } = parseFlags(rawArgs);
+  const { args, dryRun, template } = parseFlags(rawArgs);
 
   if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
     printHelp();
@@ -747,7 +765,7 @@ async function main() {
 
     case 'create':
       if (args[1] === 'project') {
-        return await createProjectCommand(args[2], { dryRun });
+        return await createProjectCommand(args[2], { dryRun, template });
       }
       console.error('Error: Unknown create target. Use: glm create project "<description>"');
       return 1;

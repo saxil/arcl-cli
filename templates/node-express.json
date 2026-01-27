@@ -2,7 +2,7 @@
   "name": "node-express",
   "language": "javascript",
   "description": "Express.js web server",
-  "detect": ["express", "node", "server", "api"],
+  "detect": ["express", "node server", "node api", "nodejs backend"],
   "structure": [
     "README.md",
     "package.json",

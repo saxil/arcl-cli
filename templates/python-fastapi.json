@@ -1,0 +1,23 @@
+{
+  "name": "python-fastapi",
+  "language": "python",
+  "description": "FastAPI web application",
+  "detect": ["fastapi", "api", "rest", "backend", "async", "uvicorn", "web api"],
+  "structure": [
+    "README.md",
+    "requirements.txt",
+    ".gitignore",
+    "src/main.py",
+    "src/routes/__init__.py",
+    "src/routes/api.py"
+  ],
+  "fileDescriptions": {
+    "README.md": "Project documentation with API endpoints and setup",
+    "requirements.txt": "Python package dependencies including FastAPI and uvicorn",
+    ".gitignore": "Git ignore file for Python projects",
+    "src/main.py": "FastAPI application entry point",
+    "src/routes/__init__.py": "Routes package initialization",
+    "src/routes/api.py": "API route handlers"
+  },
+  "venv": true
+}

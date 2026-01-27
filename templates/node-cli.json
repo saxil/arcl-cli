@@ -2,7 +2,7 @@
   "name": "node-cli",
   "language": "javascript",
   "description": "Node.js command-line tool",
-  "detect": ["cli", "command-line", "tool"],
+  "detect": ["node cli", "npm cli", "javascript cli", "commander", "yargs"],
   "structure": [
     "README.md",
     "package.json",

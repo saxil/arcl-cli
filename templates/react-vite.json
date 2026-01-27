@@ -2,7 +2,7 @@
   "name": "react-vite",
   "language": "javascript",
   "description": "React app with Vite bundler",
-  "detect": ["react", "vite", "frontend", "spa"],
+  "detect": ["react", "vite", "frontend", "spa", "web app", "ui"],
   "structure": [
     "README.md",
     "package.json",
