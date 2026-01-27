@@ -11,6 +11,9 @@ GLM is a transactional filesystem mutation engine for AI-assisted coding. It ope
 - **Transactional edits** — Add, edit, or remove files atomically
 - **Template-based scaffolding** — Deterministic project creation from JSON templates
 - **Read-only understanding** — `glm ask` explains code without modification
+- **Change explanation** — `glm explain` describes what a change did and why
+- **Edit guardrails** — Policy-based validation via `.glm/config.json`
+- **Provider fallback** — Automatic failover when primary LLM is unavailable
 - **Preview mode** — `--dry-run` shows what would happen without applying
 - **Change history** — All operations logged to `.glm/history.json`
 - **UTF-8 everywhere** — Explicit encoding, no corruption, no BOM issues
@@ -18,7 +21,7 @@ GLM is a transactional filesystem mutation engine for AI-assisted coding. It ope
 - **Automatic backups** — Every mutation creates a `.bak` file
 - **Rollback on failure** — Failed patches restore original content
 - **Workspace isolation** — Operations confined to `C:\glm-projects` (Windows) or `~/glm-projects`
-- **Multi-provider LLM** — Gemini, OpenRouter, Anthropic, or local (Ollama)
+- **Multi-provider LLM** — Gemini, OpenRouter, or local (Ollama)
 
 ## Installation
 
@@ -84,6 +87,10 @@ glm ask src/main.py "explain the main function"
 
 # Summarize a project
 glm ask . "summarize this project"
+
+# Explain what a change did
+glm explain last
+glm explain src/main.py
 ```
 
 ### Project Creation
@@ -245,6 +252,44 @@ All operations are logged to `.glm/history.json`:
 
 History is append-only and read-only by default.
 
+## Edit Guardrails
+
+Create `.glm/config.json` to enforce policies:
+
+```json
+{
+  "allow_full_rewrites": false,
+  "forbid_patterns": ["eval\\(", "exec\\(", "__import__\\("],
+  "max_diff_lines": 500,
+  "require_confirmation": true
+}
+```
+
+| Policy | Default | Description |
+|--------|---------|-------------|
+| `allow_full_rewrites` | `false` | Permit diffs that replace entire files |
+| `forbid_patterns` | `["eval\\(", ...]` | Regex patterns to reject in output |
+| `max_diff_lines` | `500` | Maximum lines per diff (0 = unlimited) |
+| `require_confirmation` | `true` | Always ask before applying |
+
+Violations are rejected with clear error messages.
+
+## Provider Fallback
+
+If the primary provider is unavailable, GLM automatically falls back:
+
+```
+Warning: gemini unavailable, falling back to openrouter
+```
+
+Fallback order: `gemini` → `openrouter` → `local`
+
+Transient errors that trigger fallback:
+- Rate limits
+- 502/503 errors
+- Timeouts
+- Capacity issues
+
 ## Core Principles
 
 1. **Runtime owns structure** — LLM never creates directories or chooses paths
@@ -259,11 +304,12 @@ History is append-only and read-only by default.
 | `agent.js` | CLI entry point and command router |
 | `llm.js` | LLM abstraction with retry logic |
 | `io.js` | UTF-8 file I/O layer |
+| `config.js` | Policy guardrails and configuration |
 | `history.js` | Change tracking and logging |
 | `applyDiff.js` | Unified diff parsing and application |
 | `workspace.js` | Workspace management and path validation |
 | `scaffold.js` | Template-based project scaffolding |
-| `providers/` | LLM provider adapters (Gemini, OpenRouter, Local) |
+| `providers/` | LLM provider adapters with health + fallback |
 | `templates/` | Project template JSON files |
 
 ## Requirements

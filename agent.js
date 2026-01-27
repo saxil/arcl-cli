@@ -28,7 +28,7 @@
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
-import { callLLM, callScaffoldLLM, callAskLLM, validateDiffFormat } from './llm.js';
+import { callLLM, callScaffoldLLM, callAskLLM, callExplainLLM, validateDiffFormat } from './llm.js';
 import { applyDiffToFile } from './applyDiff.js';
 import {
   getDefaultWorkspaceRoot,
@@ -48,7 +48,8 @@ import {
   listTemplates
 } from './scaffold.js';
 import { readFileUTF8, writeFileUTF8, fileExists, copyFileUTF8, deleteFile } from './io.js';
-import { recordCommand, getCurrentProvider } from './history.js';
+import { recordCommand, getCurrentProvider, getLastEntries, getEntriesForFile } from './history.js';
+import { loadConfig, validateAgainstPolicy } from './config.js';
 
 // ─────────────────────────────────────────────────────────────
 // Utilities
@@ -79,7 +80,7 @@ async function confirm(prompt) {
 
 function printHelp() {
   const workspaceRoot = getDefaultWorkspaceRoot();
-  console.log(`glm - CLI-Based Coding Agent (v2.2)
+  console.log(`glm - CLI-Based Coding Agent (v2.3)
 
 TRANSACTIONAL COMMANDS (single-file, safe):
   glm add <file> "<instruction>"     Create a new file
@@ -93,6 +94,8 @@ PROJECT CREATION (template-based):
 
 READ-ONLY (understand code):
   glm ask <path> "<question>"        Explain code without modifying
+  glm explain last                   Explain last change
+  glm explain <file>                 Explain changes to file
 
 FLAGS:
   --dry-run                          Preview changes without applying
@@ -108,7 +111,7 @@ EXAMPLES:
   glm edit main.py "add error handling"
   glm edit --dry-run main.py "add logging"
   glm ask src/main.py "explain the main function"
-  glm create project "a calculator app using tkinter"
+  glm explain last
   glm create project --template python-fastapi "REST API for users"
 
 WORKSPACE: ${workspaceRoot}
@@ -272,6 +275,17 @@ async function editCommand(filePath, instruction, options = {}) {
     console.error(`Error: ${validation.error}`);
     recordCommand({ command: 'edit', files: absolutePath, instruction, provider: getCurrentProvider(), result: 'failed', error: validation.error });
     return 1;
+  }
+
+  // Validate against policy guardrails
+  const configResult = loadConfig();
+  if (configResult.success) {
+    const policyCheck = validateAgainstPolicy(response.diff, configResult.config);
+    if (!policyCheck.valid) {
+      console.error(`Error: ${policyCheck.error}`);
+      recordCommand({ command: 'edit', files: absolutePath, instruction, provider: getCurrentProvider(), result: 'failed', error: policyCheck.error });
+      return 1;
+    }
   }
 
   console.log(response.diff);
@@ -638,6 +652,72 @@ async function askCommand(targetPath, question) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// glm explain [last | <file>]
+// ─────────────────────────────────────────────────────────────
+
+async function explainCommand(target) {
+  if (!target) {
+    console.error('Error: Target required');
+    console.error('Usage: glm explain last');
+    console.error('       glm explain <file>');
+    return 1;
+  }
+
+  let entries = [];
+  let label = '';
+
+  if (target === 'last') {
+    // Get last entry
+    const result = getLastEntries(1);
+    if (!result.success) {
+      console.error(`Error: ${result.error}`);
+      return 1;
+    }
+    entries = result.entries;
+    label = 'last change';
+  } else {
+    // Get entries for file
+    const result = getEntriesForFile(target);
+    if (!result.success) {
+      console.error(`Error: ${result.error}`);
+      return 1;
+    }
+    entries = result.entries;
+    label = target;
+  }
+
+  if (entries.length === 0) {
+    console.error(`No history found for: ${label}`);
+    console.error('Run some glm commands first to build history.');
+    return 1;
+  }
+
+  console.log(`Explaining: ${label}`);
+  console.log(`Found ${entries.length} change(s)\n`);
+
+  // Show raw history first
+  for (const entry of entries.slice(-5)) { // Last 5 max
+    console.log(`  [${entry.timestamp.slice(0, 10)}] ${entry.command} ${entry.files.join(', ')}`);
+    console.log(`    "${entry.instruction}" → ${entry.result}`);
+  }
+  console.log('');
+
+  // Call LLM for explanation
+  const response = await callExplainLLM({ entries: entries.slice(-5) });
+
+  if (!response.success) {
+    console.error(`Error: ${response.error}`);
+    return 1;
+  }
+
+  console.log('--- Explanation ---');
+  console.log(response.explanation);
+  console.log('');
+  
+  return 0;
+}
+
+// ─────────────────────────────────────────────────────────────
 // glm ls
 // ─────────────────────────────────────────────────────────────
 
@@ -776,6 +856,15 @@ async function main() {
         return 1;
       }
       return await askCommand(args[1], args[2]);
+
+    case 'explain':
+      if (args.length < 2) {
+        console.error('Error: glm explain requires <target>');
+        console.error('Usage: glm explain last');
+        console.error('       glm explain <file>');
+        return 1;
+      }
+      return await explainCommand(args[1]);
 
     case 'ls':
       return lsCommand();

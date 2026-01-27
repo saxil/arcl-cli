@@ -227,6 +227,36 @@ You are explaining, not modifying.
 `;
 
 /**
+ * System prompt for explaining past changes (glm explain).
+ * Analyzes history entries and explains what happened.
+ */
+export const EXPLAIN_PROMPT = `You are a change explanation assistant.
+
+Your task is to explain what a code change did and why.
+
+INPUT:
+- Command history (what was requested)
+- File paths affected
+- User's original instruction
+
+OUTPUT:
+- Clear explanation of what the change accomplished
+- Why this change was made (based on instruction)
+- Any notable effects or side effects
+
+RULES:
+1. Be factual and concise
+2. Focus on the "what" and "why"
+3. Do NOT suggest further changes
+4. Do NOT output code or diffs
+5. Keep it readable for code review
+
+TONE:
+- Professional and clear
+- Suitable for a git commit message or code review
+`;
+
+/**
  * Mock LLM implementation for testing without API.
  * Returns a simulated diff based on simple heuristics.
  * 
@@ -491,6 +521,62 @@ Provide a clear, concise answer:`;
   }
 
   return { success: true, answer: response.content };
+}
+
+/**
+ * LLM call for explaining past changes (glm explain).
+ * Uses EXPLAIN_PROMPT and returns plain text explanation.
+ * 
+ * @param {Object} params
+ * @param {Object[]} params.entries - History entries to explain
+ * @returns {Promise<{success: boolean, explanation?: string, error?: string}>}
+ */
+export async function callExplainLLM({ entries }) {
+  if (!hasProvider()) {
+    // Return mock explanation
+    const entry = entries[0];
+    return {
+      success: true,
+      explanation: `[Mock] Change explanation for ${entry.command} on ${entry.files.join(', ')}:\n\nInstruction: "${entry.instruction}"\nResult: ${entry.result}\nProvider: ${entry.provider}\n\nIn a real environment with a configured LLM provider, you would receive a detailed explanation of what this change accomplished and why.`
+    };
+  }
+
+  // Build context from entries
+  const entriesText = entries.map((e, i) => `
+Change ${i + 1}:
+- Command: ${e.command}
+- Files: ${e.files.join(', ')}
+- Instruction: "${e.instruction}"
+- Result: ${e.result}
+- Timestamp: ${e.timestamp}
+${e.error ? `- Error: ${e.error}` : ''}
+`).join('\n');
+
+  const prompt = `${EXPLAIN_PROMPT}
+
+CHANGE HISTORY:
+${entriesText}
+
+Explain what these changes accomplished and why they were made:`;
+
+  // Call provider with explain mode
+  const response = await callProvider({
+    fileContent: entriesText,
+    filePath: 'history',
+    instruction: 'Explain these changes',
+    isAsk: true,  // Reuse ask mode (read-only)
+    askPrompt: prompt
+  });
+
+  if (response.type === 'error') {
+    return { success: false, error: response.error };
+  }
+
+  if (response.type === 'refuse') {
+    return { success: false, error: 'Model refused to explain' };
+  }
+
+  return { success: true, explanation: response.content };
 }
 
 /**

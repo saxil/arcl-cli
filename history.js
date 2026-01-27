@@ -168,6 +168,38 @@ export function getCurrentProvider() {
   return provider;
 }
 
+/**
+ * Gets the last N history entries.
+ * 
+ * @param {number} count - Number of entries to return
+ * @returns {{success: boolean, entries?: HistoryEntry[], error?: string}}
+ */
+export function getLastEntries(count = 1) {
+  const result = readHistory();
+  if (!result.success) return result;
+  
+  const entries = result.entries.slice(-count);
+  return { success: true, entries };
+}
+
+/**
+ * Gets history entries for a specific file.
+ * 
+ * @param {string} filePath - File path to filter by
+ * @returns {{success: boolean, entries?: HistoryEntry[], error?: string}}
+ */
+export function getEntriesForFile(filePath) {
+  const result = readHistory();
+  if (!result.success) return result;
+  
+  const normalized = path.basename(filePath);
+  const entries = result.entries.filter(e => 
+    e.files && e.files.some(f => f.includes(normalized) || normalized.includes(path.basename(f)))
+  );
+  
+  return { success: true, entries };
+}
+
 export default {
   getGlmDir,
   getHistoryPath,
@@ -176,5 +208,7 @@ export default {
   readHistory,
   appendHistory,
   recordCommand,
-  getCurrentProvider
+  getCurrentProvider,
+  getLastEntries,
+  getEntriesForFile
 };
