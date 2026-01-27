@@ -1,0 +1,19 @@
+{
+  "name": "python-tkinter",
+  "language": "python",
+  "description": "Tkinter GUI application",
+  "detect": ["tkinter", "gui", "desktop"],
+  "structure": [
+    "README.md",
+    "requirements.txt",
+    ".gitignore",
+    "src/main.py"
+  ],
+  "fileDescriptions": {
+    "README.md": "Project documentation with setup and usage instructions",
+    "requirements.txt": "Python package dependencies",
+    ".gitignore": "Git ignore file for Python projects",
+    "src/main.py": "Main Tkinter application with GUI"
+  },
+  "venv": true
+}

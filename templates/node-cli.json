@@ -1,0 +1,21 @@
+{
+  "name": "node-cli",
+  "language": "javascript",
+  "description": "Node.js command-line tool",
+  "detect": ["cli", "command-line", "tool"],
+  "structure": [
+    "README.md",
+    "package.json",
+    ".gitignore",
+    "src/index.js",
+    "src/commands.js"
+  ],
+  "fileDescriptions": {
+    "README.md": "CLI documentation and usage examples",
+    "package.json": "Node.js package manifest with bin entry",
+    ".gitignore": "Git ignore file for Node.js projects",
+    "src/index.js": "CLI entry point with argument parsing",
+    "src/commands.js": "Command implementations"
+  },
+  "venv": false
+}

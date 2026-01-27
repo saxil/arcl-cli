@@ -18,7 +18,6 @@
  * No chat. No magic. Boring but trustworthy.
  */
 
-import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
 import { callLLM, callScaffoldLLM, validateDiffFormat } from './llm.js';
@@ -33,12 +32,14 @@ import {
   planProject,
   validatePlan,
   createStructure,
-  writeFile,
+  writeProjectFile,
   rollbackProject,
   createVenv,
   buildProjectPrompt,
-  parseProjectOutput
+  parseProjectOutput,
+  listTemplates
 } from './scaffold.js';
+import { readFileUTF8, writeFileUTF8, fileExists, copyFileUTF8, deleteFile } from './io.js';
 
 // ─────────────────────────────────────────────────────────────
 // Utilities
@@ -69,15 +70,16 @@ async function confirm(prompt) {
 
 function printHelp() {
   const workspaceRoot = getDefaultWorkspaceRoot();
-  console.log(`glm - CLI-Based Coding Agent (v2)
+  console.log(`glm - CLI-Based Coding Agent (v2.1)
 
 TRANSACTIONAL COMMANDS (single-file, safe):
   glm add <file> "<instruction>"     Create a new file
   glm edit <file> "<instruction>"    Modify an existing file
   glm remove <file>                  Delete a file
 
-PROJECT CREATION (multi-file, procedural):
+PROJECT CREATION (template-based):
   glm create project "<description>"
+  glm templates                      List available templates
 
 UTILITIES:
   glm ls                             List directory contents
@@ -107,7 +109,7 @@ async function addCommand(filePath, instruction) {
 
   const absolutePath = pathCheck.absolutePath;
 
-  if (fs.existsSync(absolutePath)) {
+  if (fileExists(absolutePath)) {
     console.error(`Error: File already exists: ${absolutePath}`);
     console.error('Use "glm edit" to modify existing files.');
     return 1;
@@ -170,17 +172,13 @@ Output the content as a unified diff that ADDS all lines to an empty file. Examp
     return 0;
   }
 
-  const parentDir = path.dirname(absolutePath);
-  if (!fs.existsSync(parentDir)) {
-    fs.mkdirSync(parentDir, { recursive: true });
-  }
-
-  try {
-    fs.writeFileSync(absolutePath, content, 'utf8');
+  // Write file using UTF-8 encoding (io.js handles directory creation)
+  const writeResult = writeFileUTF8(absolutePath, content);
+  if (writeResult.success) {
     console.log(`Created: ${absolutePath}`);
     return 0;
-  } catch (err) {
-    console.error(`Error: Failed to write file: ${err.message}`);
+  } else {
+    console.error(`Error: Failed to write file: ${writeResult.error}`);
     return 1;
   }
 }
@@ -198,19 +196,18 @@ async function editCommand(filePath, instruction) {
 
   const absolutePath = pathCheck.absolutePath;
 
-  if (!fs.existsSync(absolutePath)) {
+  if (!fileExists(absolutePath)) {
     console.error(`Error: File not found: ${absolutePath}`);
     console.error('Use "glm add" to create new files.');
     return 1;
   }
 
-  let fileContent;
-  try {
-    fileContent = fs.readFileSync(absolutePath, 'utf8');
-  } catch (err) {
-    console.error(`Error: Failed to read file: ${err.message}`);
+  const readResult = readFileUTF8(absolutePath);
+  if (!readResult.success) {
+    console.error(`Error: Failed to read file: ${readResult.error}`);
     return 1;
   }
+  const fileContent = readResult.content;
 
   console.log(`File: ${absolutePath}`);
   console.log(`Instruction: ${instruction}`);
@@ -269,13 +266,14 @@ async function removeCommand(filePath) {
 
   const absolutePath = pathCheck.absolutePath;
 
-  if (!fs.existsSync(absolutePath)) {
+  if (!fileExists(absolutePath)) {
     console.error(`Error: File not found: ${absolutePath}`);
     return 1;
   }
 
-  const stats = fs.statSync(absolutePath);
-  if (stats.isDirectory()) {
+  // Check if it's a file (not directory) by trying to read it
+  const readCheck = readFileUTF8(absolutePath);
+  if (!readCheck.success && readCheck.error.includes('EISDIR')) {
     console.error('Error: Cannot remove directories. Use file paths only.');
     return 1;
   }
@@ -289,21 +287,20 @@ async function removeCommand(filePath) {
   }
 
   const backupPath = absolutePath + '.deleted.bak';
-  try {
-    fs.copyFileSync(absolutePath, backupPath);
-  } catch (err) {
-    console.error(`Warning: Could not create backup: ${err.message}`);
+  const backupResult = copyFileUTF8(absolutePath, backupPath);
+  if (!backupResult.success) {
+    console.error(`Warning: Could not create backup: ${backupResult.error}`);
   }
 
-  try {
-    fs.unlinkSync(absolutePath);
+  const deleteResult = deleteFile(absolutePath);
+  if (deleteResult.success) {
     console.log(`Deleted: ${absolutePath}`);
-    if (fs.existsSync(backupPath)) {
+    if (fileExists(backupPath)) {
       console.log(`Backup: ${backupPath}`);
     }
     return 0;
-  } catch (err) {
-    console.error(`Error: Failed to delete: ${err.message}`);
+  } else {
+    console.error(`Error: Failed to delete: ${deleteResult.error}`);
     return 1;
   }
 }
@@ -319,8 +316,13 @@ async function createProjectCommand(description) {
     return 1;
   }
 
-  // Plan the project
-  const plan = planProject(description);
+  // Plan the project (now returns {success, plan, error})
+  const planResult = planProject(description);
+  if (!planResult.success) {
+    console.error(`Error: ${planResult.error}`);
+    return 1;
+  }
+  const plan = planResult.plan;
   
   // Validate
   const validation = validatePlan(plan);
@@ -331,7 +333,7 @@ async function createProjectCommand(description) {
 
   // Show plan
   console.log(`\nProject: ${plan.projectName}`);
-  console.log(`Type: ${plan.schemaName}`);
+  console.log(`Template: ${plan.templateName}`);
   console.log(`Location: ${plan.projectPath}`);
   console.log(`\nPlanned structure:`);
   
@@ -353,7 +355,7 @@ async function createProjectCommand(description) {
 
   // Ask about venv if supported
   let createVenvFlag = false;
-  if (plan.venvSupported) {
+  if (plan.venv) {
     createVenvFlag = await confirm('Create Python virtual environment (venv)? [y/N] ');
   }
 
@@ -406,7 +408,7 @@ async function createProjectCommand(description) {
   let writtenCount = 0;
   
   for (const file of filesToWrite) {
-    const result = writeFile(file.path, file.content);
+    const result = writeProjectFile(file.path, file.content);
     if (result.success) {
       console.log(`  Created: ${file.relativePath}`);
       writtenCount++;
@@ -419,7 +421,7 @@ async function createProjectCommand(description) {
   for (const expected of plan.files) {
     if (!filesToWrite.find(f => f.relativePath === expected.relativePath)) {
       const defaultContent = getDefaultContent(expected.relativePath, plan);
-      const result = writeFile(expected.path, defaultContent);
+      const result = writeProjectFile(expected.path, defaultContent);
       if (result.success) {
         console.log(`  Created: ${expected.relativePath} (default)`);
         writtenCount++;
@@ -452,15 +454,16 @@ async function createProjectCommand(description) {
 function getDefaultContent(relativePath, plan) {
   const ext = path.extname(relativePath);
   const name = plan.projectName;
+  const lang = plan.template?.language || '';
   
   if (relativePath === 'README.md') {
     return `# ${name}\n\n${plan.description}\n`;
   }
   if (relativePath === '.gitignore') {
-    if (plan.projectType === 'python') {
+    if (lang === 'python') {
       return `__pycache__/\n*.pyc\nvenv/\n.env\n`;
     }
-    if (plan.projectType === 'node') {
+    if (lang === 'javascript') {
       return `node_modules/\n.env\ndist/\n`;
     }
     return `.env\n`;
@@ -529,6 +532,27 @@ function treeCommand() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// glm templates
+// ─────────────────────────────────────────────────────────────
+
+function templatesCommand() {
+  const result = listTemplates();
+  
+  if (!result.success) {
+    console.error(`Error: ${result.error}`);
+    return 1;
+  }
+
+  console.log('Available templates:\n');
+  for (const t of result.templates) {
+    console.log(`  ${t.name}`);
+    console.log(`    ${t.description} (${t.language})`);
+  }
+  console.log('');
+  return 0;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Command Router
 // ─────────────────────────────────────────────────────────────
 
@@ -576,6 +600,9 @@ async function main() {
 
     case 'tree':
       return treeCommand();
+
+    case 'templates':
+      return templatesCommand();
 
     // Legacy compatibility
     case 'run':

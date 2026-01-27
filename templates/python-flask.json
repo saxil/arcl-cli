@@ -1,0 +1,23 @@
+{
+  "name": "python-flask",
+  "language": "python",
+  "description": "Flask web application",
+  "detect": ["flask", "api", "rest", "web server", "backend"],
+  "structure": [
+    "README.md",
+    "requirements.txt",
+    ".gitignore",
+    "src/app.py",
+    "src/routes/__init__.py",
+    "src/routes/main.py"
+  ],
+  "fileDescriptions": {
+    "README.md": "Project documentation with API endpoints and setup",
+    "requirements.txt": "Python package dependencies including Flask",
+    ".gitignore": "Git ignore file for Python projects",
+    "src/app.py": "Flask application factory and configuration",
+    "src/routes/__init__.py": "Routes package initialization",
+    "src/routes/main.py": "Main route handlers"
+  },
+  "venv": true
+}

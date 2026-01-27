@@ -1,0 +1,19 @@
+{
+  "name": "python-script",
+  "language": "python",
+  "description": "Python command-line script",
+  "detect": ["python", "script", "cli", "command"],
+  "structure": [
+    "README.md",
+    "requirements.txt",
+    ".gitignore",
+    "main.py"
+  ],
+  "fileDescriptions": {
+    "README.md": "Script documentation and usage",
+    "requirements.txt": "Python package dependencies",
+    ".gitignore": "Git ignore file for Python projects",
+    "main.py": "Main script entry point"
+  },
+  "venv": true
+}

@@ -1,0 +1,17 @@
+{
+  "name": "generic",
+  "language": "text",
+  "description": "Generic project",
+  "detect": [],
+  "structure": [
+    "README.md",
+    ".gitignore",
+    "src/main.txt"
+  ],
+  "fileDescriptions": {
+    "README.md": "Project documentation",
+    ".gitignore": "Git ignore file",
+    "src/main.txt": "Main content file"
+  },
+  "venv": false
+}

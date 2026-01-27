@@ -1,0 +1,21 @@
+{
+  "name": "node-express",
+  "language": "javascript",
+  "description": "Express.js web server",
+  "detect": ["express", "node", "server", "api"],
+  "structure": [
+    "README.md",
+    "package.json",
+    ".gitignore",
+    "src/index.js",
+    "src/routes/index.js"
+  ],
+  "fileDescriptions": {
+    "README.md": "Project documentation with API endpoints",
+    "package.json": "Node.js package manifest with dependencies",
+    ".gitignore": "Git ignore file for Node.js projects",
+    "src/index.js": "Express server entry point",
+    "src/routes/index.js": "Route handlers"
+  },
+  "venv": false
+}

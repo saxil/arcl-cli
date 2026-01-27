@@ -2,15 +2,13 @@
  * Diff Application Module
  * 
  * Handles parsing, validating, and applying unified diffs safely.
- * Uses diff-match-patch for patch operations.
+ * Uses manual hunk parsing for reliable patching.
+ * All I/O uses explicit UTF-8 encoding via io.js.
  */
 
-import DiffMatchPatch from 'diff-match-patch';
-import fs from 'fs';
 import path from 'path';
 import { log } from './logger.js';
-
-const dmp = new DiffMatchPatch();
+import { readFileUTF8, writeFileUTF8, copyFileUTF8, fileExists } from './io.js';
 
 /**
  * @typedef {Object} PatchResult
@@ -183,13 +181,18 @@ export function createBackup(filePath) {
     
     // Check if backup already exists - add timestamp to avoid overwrite
     let finalBackupPath = backupPath;
-    if (fs.existsSync(backupPath)) {
+    if (fileExists(backupPath)) {
       const timestamp = Date.now();
       finalBackupPath = `${filePath}.${timestamp}.bak`;
       log('WARN', `Backup exists, using timestamped backup: ${finalBackupPath}`);
     }
     
-    fs.copyFileSync(filePath, finalBackupPath);
+    const result = copyFileUTF8(filePath, finalBackupPath);
+    if (!result.success) {
+      log('ERROR', `Failed to create backup: ${result.error}`);
+      return null;
+    }
+    
     log('INFO', `Created backup: ${finalBackupPath}`);
     return finalBackupPath;
   } catch (err) {
@@ -215,7 +218,7 @@ export function applyDiffToFile(filePath, unifiedDiff) {
   const absolutePath = path.resolve(filePath);
   
   // Verify file exists
-  if (!fs.existsSync(absolutePath)) {
+  if (!fileExists(absolutePath)) {
     return {
       success: false,
       backupPath: null,
@@ -223,17 +226,16 @@ export function applyDiffToFile(filePath, unifiedDiff) {
     };
   }
   
-  // Read original content
-  let originalContent;
-  try {
-    originalContent = fs.readFileSync(absolutePath, 'utf8');
-  } catch (err) {
+  // Read original content with UTF-8 encoding
+  const readResult = readFileUTF8(absolutePath);
+  if (!readResult.success) {
     return {
       success: false,
       backupPath: null,
-      error: `Failed to read file: ${err.message}`
+      error: `Failed to read file: ${readResult.error}`
     };
   }
+  const originalContent = readResult.content;
   
   // Create backup FIRST - before any modification attempt
   const backupPath = createBackup(absolutePath);
@@ -258,9 +260,10 @@ export function applyDiffToFile(filePath, unifiedDiff) {
     };
   }
   
-  // Write patched content
-  try {
-    fs.writeFileSync(absolutePath, patchResult.patchedContent, 'utf8');
+  // Write patched content with UTF-8 encoding
+  const writeResult = writeFileUTF8(absolutePath, patchResult.patchedContent);
+  
+  if (writeResult.success) {
     log('INFO', `Applied diff to: ${absolutePath}`);
     log('INFO', `Backup at: ${backupPath}`);
     return {
@@ -268,9 +271,9 @@ export function applyDiffToFile(filePath, unifiedDiff) {
       backupPath,
       error: null
     };
-  } catch (err) {
+  } else {
     // Write failed - ROLLBACK immediately
-    log('ERROR', `Write failed: ${err.message}. Rolling back...`);
+    log('ERROR', `Write failed: ${writeResult.error}. Rolling back...`);
     const restored = restoreFromBackup(absolutePath, backupPath);
     if (restored) {
       log('INFO', 'Rollback successful');
@@ -280,7 +283,7 @@ export function applyDiffToFile(filePath, unifiedDiff) {
     return {
       success: false,
       backupPath,
-      error: `Write failed: ${err.message}. ${restored ? 'Rolled back.' : 'ROLLBACK FAILED!'}`
+      error: `Write failed: ${writeResult.error}. ${restored ? 'Rolled back.' : 'ROLLBACK FAILED!'}`
     };
   }
 }
@@ -293,12 +296,12 @@ export function applyDiffToFile(filePath, unifiedDiff) {
  * @returns {boolean} Whether restoration succeeded
  */
 export function restoreFromBackup(filePath, backupPath) {
-  try {
-    fs.copyFileSync(backupPath, filePath);
+  const result = copyFileUTF8(backupPath, filePath);
+  if (result.success) {
     log('INFO', `Restored file from backup: ${filePath}`);
     return true;
-  } catch (err) {
-    log('ERROR', `Failed to restore from backup: ${err.message}`);
+  } else {
+    log('ERROR', `Failed to restore from backup: ${result.error}`);
     return false;
   }
 }

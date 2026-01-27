@@ -1,0 +1,21 @@
+{
+  "name": "web-static",
+  "language": "html",
+  "description": "Static HTML/CSS/JS website",
+  "detect": ["html", "css", "website", "webpage", "landing", "static"],
+  "structure": [
+    "README.md",
+    ".gitignore",
+    "index.html",
+    "css/style.css",
+    "js/main.js"
+  ],
+  "fileDescriptions": {
+    "README.md": "Website documentation",
+    ".gitignore": "Git ignore file",
+    "index.html": "Main HTML page",
+    "css/style.css": "Stylesheet",
+    "js/main.js": "JavaScript functionality"
+  },
+  "venv": false
+}
