@@ -1,0 +1,27 @@
+{
+  "name": "react-vite",
+  "language": "javascript",
+  "description": "React app with Vite bundler",
+  "detect": ["react", "vite", "frontend", "spa"],
+  "structure": [
+    "README.md",
+    "package.json",
+    ".gitignore",
+    "index.html",
+    "vite.config.js",
+    "src/main.jsx",
+    "src/App.jsx",
+    "src/App.css"
+  ],
+  "fileDescriptions": {
+    "README.md": "Project documentation with setup instructions",
+    "package.json": "Node.js package manifest with React and Vite dependencies",
+    ".gitignore": "Git ignore file for Node.js and Vite projects",
+    "index.html": "HTML entry point with root div",
+    "vite.config.js": "Vite configuration with React plugin",
+    "src/main.jsx": "React entry point that renders App",
+    "src/App.jsx": "Main App component",
+    "src/App.css": "App component styles"
+  },
+  "venv": false
+}
