@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+
+# Backups created by glm
+*.bak
+
+# Session data
+.vibe-agent/
+
+# Test files
+text.js
+hello.py
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

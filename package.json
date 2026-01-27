@@ -1,0 +1,31 @@
+{
+  "name": "vibe-agent",
+  "version": "1.0.0",
+  "description": "CLI-based coding agent that edits files via unified diffs",
+  "type": "module",
+  "main": "agent.js",
+  "bin": {
+    "glm": "./agent.js"
+  },
+  "scripts": {
+    "start": "node agent.js",
+    "test": "node --test test/",
+    "help": "node agent.js --help"
+  },
+  "keywords": [
+    "cli",
+    "agent",
+    "coding",
+    "diff",
+    "llm",
+    "developer-tools"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "diff-match-patch": "^1.0.5"
+  }
+}
