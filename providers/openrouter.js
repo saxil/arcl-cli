@@ -4,7 +4,7 @@
  * Multi-model gateway. Single API key, multiple models.
  */
 
-import { SYSTEM_PROMPT } from '../llm.js';
+import { SYSTEM_PROMPT, SCAFFOLD_PROMPT, ASK_PROMPT } from '../llm.js';
 
 /** OpenRouter API endpoint */
 const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -83,13 +83,26 @@ export async function callOpenRouter(request) {
     };
   }
 
-  const userMessage = buildUserMessage(request);
+  // Select prompt based on mode
+  let systemPrompt = SYSTEM_PROMPT;
+  let userMessage;
+  
+  if (request.isScaffold) {
+    systemPrompt = SCAFFOLD_PROMPT;
+    userMessage = request.fileContent;
+  } else if (request.isAsk) {
+    systemPrompt = ASK_PROMPT;
+    userMessage = request.askPrompt || `Question about ${request.filePath}: ${request.instruction}`;
+  } else {
+    userMessage = buildUserMessage(request);
+  }
+  
   const model = getModel();
 
   const body = {
     model,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: systemPrompt },
       { role: 'user', content: userMessage }
     ],
     max_tokens: 4096,
@@ -135,6 +148,14 @@ export async function callOpenRouter(request) {
 
     if (text === 'REFUSE') {
       return { type: 'refuse' };
+    }
+
+    // For scaffold and ask modes, return content directly
+    if (request.isScaffold || request.isAsk) {
+      return {
+        type: 'diff',
+        content: text
+      };
     }
 
     // Assume diff (validation happens centrally)

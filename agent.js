@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * glm - CLI-Based Coding Agent (v2)
+ * glm - CLI-Based Coding Agent (v2.2)
  * 
  * Transactional Commands:
  *   glm add <file> "<instruction>"
@@ -10,17 +10,25 @@
  * Project Creation:
  *   glm create project "<description>"
  * 
+ * Read-Only:
+ *   glm ask <path> "<question>"
+ * 
  * Utilities:
  *   glm ls
  *   glm tree
+ *   glm templates
  *   glm --help
+ * 
+ * Flags:
+ *   --dry-run  Preview without applying changes
  * 
  * No chat. No magic. Boring but trustworthy.
  */
 
+import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
-import { callLLM, callScaffoldLLM, validateDiffFormat } from './llm.js';
+import { callLLM, callScaffoldLLM, callAskLLM, validateDiffFormat } from './llm.js';
 import { applyDiffToFile } from './applyDiff.js';
 import {
   getDefaultWorkspaceRoot,
@@ -40,6 +48,7 @@ import {
   listTemplates
 } from './scaffold.js';
 import { readFileUTF8, writeFileUTF8, fileExists, copyFileUTF8, deleteFile } from './io.js';
+import { recordCommand, getCurrentProvider } from './history.js';
 
 // ─────────────────────────────────────────────────────────────
 // Utilities
@@ -70,7 +79,7 @@ async function confirm(prompt) {
 
 function printHelp() {
   const workspaceRoot = getDefaultWorkspaceRoot();
-  console.log(`glm - CLI-Based Coding Agent (v2.1)
+  console.log(`glm - CLI-Based Coding Agent (v2.2)
 
 TRANSACTIONAL COMMANDS (single-file, safe):
   glm add <file> "<instruction>"     Create a new file
@@ -81,6 +90,12 @@ PROJECT CREATION (template-based):
   glm create project "<description>"
   glm templates                      List available templates
 
+READ-ONLY (understand code):
+  glm ask <path> "<question>"        Explain code without modifying
+
+FLAGS:
+  --dry-run                          Preview changes without applying
+
 UTILITIES:
   glm ls                             List directory contents
   glm tree                           Show directory tree
@@ -89,7 +104,9 @@ UTILITIES:
 EXAMPLES:
   glm add main.py "hello world script"
   glm edit main.py "add error handling"
-  glm remove main.py
+  glm edit --dry-run main.py "add logging"
+  glm ask src/main.py "explain the main function"
+  glm ask . "summarize this project"
   glm create project "a calculator app using tkinter"
 
 WORKSPACE: ${workspaceRoot}
@@ -97,10 +114,12 @@ WORKSPACE: ${workspaceRoot}
 }
 
 // ─────────────────────────────────────────────────────────────
-// glm add <file> "<instruction>"
+// glm add <file> "<instruction>" [--dry-run]
 // ─────────────────────────────────────────────────────────────
 
-async function addCommand(filePath, instruction) {
+async function addCommand(filePath, instruction, options = {}) {
+  const { dryRun = false } = options;
+  
   const pathCheck = validatePath(filePath);
   if (!pathCheck.valid) {
     console.error(`Error: ${pathCheck.error}`);
@@ -117,11 +136,14 @@ async function addCommand(filePath, instruction) {
 
   console.log(`File: ${absolutePath}`);
   console.log(`(File does not exist)`);
+  if (dryRun) console.log('[DRY RUN]');
   
-  const shouldCreate = await confirm('Create it? [y/N] ');
-  if (!shouldCreate) {
-    console.log('Aborted.');
-    return 0;
+  if (!dryRun) {
+    const shouldCreate = await confirm('Create it? [y/N] ');
+    if (!shouldCreate) {
+      console.log('Aborted.');
+      return 0;
+    }
   }
 
   console.log(`Instruction: ${instruction}`);
@@ -143,6 +165,7 @@ Output the content as a unified diff that ADDS all lines to an empty file. Examp
 
   if (!response.success) {
     console.error(`Error: LLM call failed: ${response.error}`);
+    recordCommand({ command: 'add', files: absolutePath, instruction, provider: getCurrentProvider(), result: 'failed', error: response.error });
     return 1;
   }
 
@@ -166,9 +189,17 @@ Output the content as a unified diff that ADDS all lines to an empty file. Examp
   console.log('--- End Preview ---');
   console.log('');
 
+  // Dry run stops here
+  if (dryRun) {
+    console.log('[DRY RUN] No files written.');
+    recordCommand({ command: 'add', files: absolutePath, instruction, provider: getCurrentProvider(), result: 'dry-run' });
+    return 0;
+  }
+
   const shouldApply = await confirm('Write file? [y/N] ');
   if (!shouldApply) {
     console.log('Aborted.');
+    recordCommand({ command: 'add', files: absolutePath, instruction, provider: getCurrentProvider(), result: 'rejected' });
     return 0;
   }
 
@@ -176,18 +207,22 @@ Output the content as a unified diff that ADDS all lines to an empty file. Examp
   const writeResult = writeFileUTF8(absolutePath, content);
   if (writeResult.success) {
     console.log(`Created: ${absolutePath}`);
+    recordCommand({ command: 'add', files: absolutePath, instruction, provider: getCurrentProvider(), result: 'success' });
     return 0;
   } else {
     console.error(`Error: Failed to write file: ${writeResult.error}`);
+    recordCommand({ command: 'add', files: absolutePath, instruction, provider: getCurrentProvider(), result: 'failed', error: writeResult.error });
     return 1;
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// glm edit <file> "<instruction>"
+// glm edit <file> "<instruction>" [--dry-run]
 // ─────────────────────────────────────────────────────────────
 
-async function editCommand(filePath, instruction) {
+async function editCommand(filePath, instruction, options = {}) {
+  const { dryRun = false } = options;
+  
   const pathCheck = validatePath(filePath);
   if (!pathCheck.valid) {
     console.error(`Error: ${pathCheck.error}`);
@@ -211,6 +246,7 @@ async function editCommand(filePath, instruction) {
 
   console.log(`File: ${absolutePath}`);
   console.log(`Instruction: ${instruction}`);
+  if (dryRun) console.log('[DRY RUN]');
   console.log('');
 
   const response = await callLLM({
@@ -221,6 +257,7 @@ async function editCommand(filePath, instruction) {
 
   if (!response.success) {
     console.error(`Error: LLM call failed: ${response.error}`);
+    recordCommand({ command: 'edit', files: absolutePath, instruction, provider: getCurrentProvider(), result: 'failed', error: response.error });
     return 1;
   }
 
@@ -231,24 +268,35 @@ async function editCommand(filePath, instruction) {
       return 0;
     }
     console.error(`Error: ${validation.error}`);
+    recordCommand({ command: 'edit', files: absolutePath, instruction, provider: getCurrentProvider(), result: 'failed', error: validation.error });
     return 1;
   }
 
   console.log(response.diff);
   console.log('');
 
+  // Dry run stops here
+  if (dryRun) {
+    console.log('[DRY RUN] No changes applied.');
+    recordCommand({ command: 'edit', files: absolutePath, instruction, provider: getCurrentProvider(), result: 'dry-run' });
+    return 0;
+  }
+
   const approved = await confirm('Apply? [y/N] ');
   if (!approved) {
     console.log('Aborted.');
+    recordCommand({ command: 'edit', files: absolutePath, instruction, provider: getCurrentProvider(), result: 'rejected' });
     return 0;
   }
 
   const result = applyDiffToFile(absolutePath, response.diff);
   if (result.success) {
     console.log('Applied.');
+    recordCommand({ command: 'edit', files: absolutePath, instruction, provider: getCurrentProvider(), result: 'success' });
     return 0;
   } else {
     console.error(`Error: Failed to apply diff: ${result.error}`);
+    recordCommand({ command: 'edit', files: absolutePath, instruction, provider: getCurrentProvider(), result: 'failed', error: result.error });
     return 1;
   }
 }
@@ -306,10 +354,12 @@ async function removeCommand(filePath) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// glm create project "<description>"
+// glm create project "<description>" [--dry-run]
 // ─────────────────────────────────────────────────────────────
 
-async function createProjectCommand(description) {
+async function createProjectCommand(description, options = {}) {
+  const { dryRun = false } = options;
+  
   if (!description) {
     console.error('Error: Project description required');
     console.error('Usage: glm create project "<description>"');
@@ -335,6 +385,7 @@ async function createProjectCommand(description) {
   console.log(`\nProject: ${plan.projectName}`);
   console.log(`Template: ${plan.templateName}`);
   console.log(`Location: ${plan.projectPath}`);
+  if (dryRun) console.log('[DRY RUN]');
   console.log(`\nPlanned structure:`);
   
   for (const folder of plan.folders) {
@@ -345,11 +396,19 @@ async function createProjectCommand(description) {
   }
   
   console.log('');
+
+  // Dry run stops here - no confirmation, no creation
+  if (dryRun) {
+    console.log('[DRY RUN] No files or directories created.');
+    recordCommand({ command: 'create', files: plan.files.map(f => f.relativePath), instruction: description, provider: getCurrentProvider(), result: 'dry-run' });
+    return 0;
+  }
   
   // Confirm creation
   const shouldCreate = await confirm('Create this project? [y/N] ');
   if (!shouldCreate) {
     console.log('Aborted.');
+    recordCommand({ command: 'create', files: plan.files.map(f => f.relativePath), instruction: description, provider: getCurrentProvider(), result: 'rejected' });
     return 0;
   }
 
@@ -364,6 +423,7 @@ async function createProjectCommand(description) {
   const structResult = createStructure(plan);
   if (!structResult.success) {
     console.error(`Error: ${structResult.error}`);
+    recordCommand({ command: 'create', files: plan.files.map(f => f.relativePath), instruction: description, provider: getCurrentProvider(), result: 'failed', error: structResult.error });
     return 1;
   }
 
@@ -445,6 +505,7 @@ async function createProjectCommand(description) {
   console.log(`  cd "${plan.projectPath}"`);
   console.log(`  glm edit src/main.py "your changes"`);
   
+  recordCommand({ command: 'create', files: plan.files.map(f => f.relativePath), instruction: description, provider: getCurrentProvider(), result: 'success' });
   return 0;
 }
 
@@ -487,6 +548,90 @@ function getDefaultContent(relativePath, plan) {
     return `/* Styles for ${name} */\n`;
   }
   return `# ${name}\n`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// glm ask <path> "<question>"
+// ─────────────────────────────────────────────────────────────
+
+async function askCommand(targetPath, question) {
+  if (!targetPath || !question) {
+    console.error('Error: Path and question required');
+    console.error('Usage: glm ask <path> "<question>"');
+    return 1;
+  }
+
+  const absolutePath = path.resolve(targetPath);
+  
+  // Check if path exists
+  if (!fileExists(absolutePath) && !fs.existsSync(absolutePath)) {
+    console.error(`Error: Path not found: ${absolutePath}`);
+    return 1;
+  }
+
+  const stats = fs.statSync(absolutePath);
+  let content = '';
+  let pathLabel = absolutePath;
+  
+  if (stats.isDirectory()) {
+    // Read multiple files from directory (limited)
+    console.log(`Reading directory: ${absolutePath}`);
+    const entries = fs.readdirSync(absolutePath);
+    const codeFiles = entries
+      .filter(e => !e.startsWith('.') && !e.includes('node_modules') && !e.includes('venv'))
+      .filter(e => {
+        const ext = path.extname(e).toLowerCase();
+        return ['.py', '.js', '.ts', '.jsx', '.tsx', '.json', '.md', '.txt', '.html', '.css'].includes(ext) || !ext;
+      })
+      .slice(0, 10); // Limit to 10 files
+    
+    for (const file of codeFiles) {
+      const filePath = path.join(absolutePath, file);
+      const stat = fs.statSync(filePath);
+      if (stat.isFile() && stat.size < 50000) { // Max 50KB per file
+        const readResult = readFileUTF8(filePath);
+        if (readResult.success) {
+          content += `\n=== ${file} ===\n${readResult.content}\n`;
+        }
+      }
+    }
+    pathLabel = `${absolutePath} (${codeFiles.length} files)`;
+  } else {
+    // Single file
+    const readResult = readFileUTF8(absolutePath);
+    if (!readResult.success) {
+      console.error(`Error: Failed to read file: ${readResult.error}`);
+      return 1;
+    }
+    content = readResult.content;
+  }
+
+  if (!content.trim()) {
+    console.error('Error: No readable content found');
+    return 1;
+  }
+
+  console.log(`Path: ${pathLabel}`);
+  console.log(`Question: ${question}`);
+  console.log('');
+
+  const response = await callAskLLM({
+    content,
+    question,
+    path: targetPath
+  });
+
+  if (!response.success) {
+    console.error(`Error: ${response.error}`);
+    recordCommand({ command: 'ask', files: absolutePath, instruction: question, provider: getCurrentProvider(), result: 'failed', error: response.error });
+    return 1;
+  }
+
+  console.log(response.answer);
+  console.log('');
+  
+  recordCommand({ command: 'ask', files: absolutePath, instruction: question, provider: getCurrentProvider(), result: 'success' });
+  return 0;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -556,8 +701,20 @@ function templatesCommand() {
 // Command Router
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Parses --dry-run flag from args and returns cleaned args.
+ * @param {string[]} args 
+ * @returns {{args: string[], dryRun: boolean}}
+ */
+function parseFlags(args) {
+  const dryRun = args.includes('--dry-run');
+  const cleanedArgs = args.filter(a => a !== '--dry-run');
+  return { args: cleanedArgs, dryRun };
+}
+
 async function main() {
-  const args = process.argv.slice(2);
+  const rawArgs = process.argv.slice(2);
+  const { args, dryRun } = parseFlags(rawArgs);
 
   if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
     printHelp();
@@ -572,14 +729,14 @@ async function main() {
         console.error('Error: glm add requires <file> and "<instruction>"');
         return 1;
       }
-      return await addCommand(args[1], args[2]);
+      return await addCommand(args[1], args[2], { dryRun });
 
     case 'edit':
       if (args.length < 3) {
         console.error('Error: glm edit requires <file> and "<instruction>"');
         return 1;
       }
-      return await editCommand(args[1], args[2]);
+      return await editCommand(args[1], args[2], { dryRun });
 
     case 'remove':
       if (args.length < 2) {
@@ -590,10 +747,17 @@ async function main() {
 
     case 'create':
       if (args[1] === 'project') {
-        return await createProjectCommand(args[2]);
+        return await createProjectCommand(args[2], { dryRun });
       }
       console.error('Error: Unknown create target. Use: glm create project "<description>"');
       return 1;
+
+    case 'ask':
+      if (args.length < 3) {
+        console.error('Error: glm ask requires <path> and "<question>"');
+        return 1;
+      }
+      return await askCommand(args[1], args[2]);
 
     case 'ls':
       return lsCommand();
@@ -608,8 +772,8 @@ async function main() {
     case 'run':
       console.error('Warning: "glm run" is deprecated in v2. Use "glm add/edit/remove" directly.');
       const action = args[1];
-      if (action === 'add') return await addCommand(args[2], args[3]);
-      if (action === 'edit') return await editCommand(args[2], args[3]);
+      if (action === 'add') return await addCommand(args[2], args[3], { dryRun });
+      if (action === 'edit') return await editCommand(args[2], args[3], { dryRun });
       if (action === 'remove') return await removeCommand(args[2]);
       return 1;
 

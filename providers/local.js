@@ -50,7 +50,12 @@ function getModel() {
  * @returns {string}
  */
 function buildPrompt(request) {
-  const { fileContent, filePath, instruction, feedbackContext, isScaffold } = request;
+  const { fileContent, filePath, instruction, feedbackContext, isScaffold, isAsk, askPrompt } = request;
+  
+  // Use ask prompt for read-only mode
+  if (isAsk) {
+    return askPrompt || `Explain this code:\n\n${fileContent}\n\nQuestion: ${instruction}`;
+  }
   
   // Use scaffold prompt for project creation
   if (isScaffold) {
@@ -149,6 +154,14 @@ export async function callLocal(request) {
 
     if (text === 'REFUSE') {
       return { type: 'refuse' };
+    }
+
+    // For scaffold and ask modes, return content directly
+    if (request.isScaffold || request.isAsk) {
+      return {
+        type: 'diff',
+        content: text
+      };
     }
 
     // Assume diff (validation happens centrally)

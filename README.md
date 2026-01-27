@@ -10,6 +10,9 @@ GLM is a transactional filesystem mutation engine for AI-assisted coding. It ope
 
 - **Transactional edits** — Add, edit, or remove files atomically
 - **Template-based scaffolding** — Deterministic project creation from JSON templates
+- **Read-only understanding** — `glm ask` explains code without modification
+- **Preview mode** — `--dry-run` shows what would happen without applying
+- **Change history** — All operations logged to `.glm/history.json`
 - **UTF-8 everywhere** — Explicit encoding, no corruption, no BOM issues
 - **Diff-based changes** — All modifications shown as unified diffs before applying
 - **Automatic backups** — Every mutation creates a `.bak` file
@@ -67,6 +70,20 @@ glm edit main.py "add error handling"
 
 # Remove a file
 glm remove main.py
+
+# Preview without applying (dry run)
+glm edit --dry-run main.py "add logging"
+glm add --dry-run utils.py "helper functions"
+```
+
+### Read-Only Mode
+
+```bash
+# Explain code in a file
+glm ask src/main.py "explain the main function"
+
+# Summarize a project
+glm ask . "summarize this project"
 ```
 
 ### Project Creation
@@ -77,6 +94,9 @@ glm templates
 
 # Create a complete project (auto-detects template)
 glm create project "a calculator app using tkinter"
+
+# Preview project creation
+glm create project --dry-run "a flask REST API"
 ```
 
 This will:
@@ -195,11 +215,29 @@ Templates live in `templates/` as JSON files:
 Available templates:
 - `python-tkinter` — Tkinter GUI app
 - `python-flask` — Flask web server
-- `python-script` — CLI script
+- `python-cli` — CLI script
 - `node-express` — Express.js server
 - `node-cli` — Node.js CLI tool
+- `react-vite` — React app with Vite
 - `web-static` — HTML/CSS/JS site
 - `generic` — Fallback
+
+## Change History
+
+All operations are logged to `.glm/history.json`:
+
+```json
+{
+  "timestamp": "2026-01-27T10:30:00.000Z",
+  "command": "edit",
+  "files": ["main.py"],
+  "instruction": "add error handling",
+  "provider": "gemini",
+  "result": "success"
+}
+```
+
+History is append-only and read-only by default.
 
 ## Core Principles
 
@@ -215,6 +253,7 @@ Available templates:
 | `agent.js` | CLI entry point and command router |
 | `llm.js` | LLM abstraction with retry logic |
 | `io.js` | UTF-8 file I/O layer |
+| `history.js` | Change tracking and logging |
 | `applyDiff.js` | Unified diff parsing and application |
 | `workspace.js` | Workspace management and path validation |
 | `scaffold.js` | Template-based project scaffolding |

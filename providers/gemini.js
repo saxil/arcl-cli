@@ -5,7 +5,7 @@
  * No tools, no function calling.
  */
 
-import { SYSTEM_PROMPT } from '../llm.js';
+import { SYSTEM_PROMPT, SCAFFOLD_PROMPT, ASK_PROMPT } from '../llm.js';
 
 /** Gemini API endpoint */
 const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -76,14 +76,27 @@ export async function callGemini(request) {
     };
   }
 
-  const userMessage = buildUserMessage(request);
+  // Select prompt based on mode
+  let systemPrompt = SYSTEM_PROMPT;
+  let userMessage;
+  
+  if (request.isScaffold) {
+    systemPrompt = SCAFFOLD_PROMPT;
+    userMessage = request.fileContent; // Contains the scaffold prompt
+  } else if (request.isAsk) {
+    systemPrompt = ASK_PROMPT;
+    userMessage = request.askPrompt || `Question about ${request.filePath}: ${request.instruction}`;
+  } else {
+    userMessage = buildUserMessage(request);
+  }
+  
   const url = `${API_URL}/${DEFAULT_MODEL}:generateContent?key=${apiKey}`;
 
   const body = {
     contents: [
       {
         parts: [
-          { text: SYSTEM_PROMPT + '\n\n' + userMessage }
+          { text: systemPrompt + '\n\n' + userMessage }
         ]
       }
     ],
@@ -127,6 +140,14 @@ export async function callGemini(request) {
 
     if (text === 'REFUSE') {
       return { type: 'refuse' };
+    }
+
+    // For scaffold and ask modes, return content directly
+    if (request.isScaffold || request.isAsk) {
+      return {
+        type: 'diff', // Reusing type for simplicity
+        content: text
+      };
     }
 
     // Assume diff (validation happens centrally)

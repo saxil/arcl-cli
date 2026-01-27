@@ -201,6 +201,32 @@ Generate content for all requested files now.
 `;
 
 /**
+ * System prompt for read-only code understanding (glm ask).
+ * No diffs, no modifications, just explanations.
+ */
+export const ASK_PROMPT = `You are a code explanation assistant.
+
+Your task is to help users understand code. You are READ-ONLY.
+
+RULES:
+1. Explain code clearly and concisely
+2. Answer the user's specific question
+3. Reference line numbers when helpful
+4. Do NOT suggest changes or modifications
+5. Do NOT output diffs
+6. Do NOT propose edits
+7. Keep explanations focused and technical
+8. If the code is too complex, summarize the key parts
+
+TONE:
+- Be helpful but concise
+- Technical, not verbose
+- Direct answers preferred
+
+You are explaining, not modifying.
+`;
+
+/**
  * Mock LLM implementation for testing without API.
  * Returns a simulated diff based on simple heuristics.
  * 
@@ -412,6 +438,59 @@ venv/
   }
 
   return { success: true, content: response.content };
+}
+
+/**
+ * LLM call for read-only code understanding (glm ask).
+ * Uses ASK_PROMPT and returns plain text explanation.
+ * 
+ * @param {Object} params
+ * @param {string} params.content - File or project content
+ * @param {string} params.question - User's question
+ * @param {string} params.path - Path being asked about
+ * @returns {Promise<{success: boolean, answer?: string, error?: string}>}
+ */
+export async function callAskLLM({ content, question, path }) {
+  if (!hasProvider()) {
+    // Return mock answer
+    return {
+      success: true,
+      answer: `[Mock] This is a mock response about "${path}".\n\nThe code appears to be a standard implementation. The user asked: "${question}"\n\nIn a real environment with a configured LLM provider, you would receive a detailed explanation here.`
+    };
+  }
+
+  // Build the prompt
+  const prompt = `${ASK_PROMPT}
+
+FILE/PATH: ${path}
+
+CONTENT:
+\`\`\`
+${content}
+\`\`\`
+
+QUESTION: ${question}
+
+Provide a clear, concise answer:`;
+
+  // Call provider with ask mode
+  const response = await callProvider({
+    fileContent: content,
+    filePath: path,
+    instruction: question,
+    isAsk: true,
+    askPrompt: prompt
+  });
+
+  if (response.type === 'error') {
+    return { success: false, error: response.error };
+  }
+
+  if (response.type === 'refuse') {
+    return { success: false, error: 'Model refused to answer' };
+  }
+
+  return { success: true, answer: response.content };
 }
 
 /**
