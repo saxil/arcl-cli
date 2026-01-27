@@ -33,7 +33,7 @@ const DEFAULT_MODEL = 'codellama';
  * @returns {string}
  */
 function getEndpoint() {
-  return process.env.GLM_LOCAL_URL || DEFAULT_URL;
+  return process.env.ARCL_LOCAL_URL || DEFAULT_URL;
 }
 
 /**
@@ -41,7 +41,7 @@ function getEndpoint() {
  * @returns {string}
  */
 function getModel() {
-  return process.env.GLM_LOCAL_MODEL || DEFAULT_MODEL;
+  return process.env.ARCL_LOCAL_MODEL || DEFAULT_MODEL;
 }
 
 /**

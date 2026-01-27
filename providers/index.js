@@ -2,7 +2,7 @@
  * Provider Router (v2.3)
  * 
  * Routes LLM requests to the selected provider.
- * Provider selection via GLM_PROVIDER environment variable.
+ * Provider selection via ARCL_PROVIDER environment variable.
  * 
  * Features:
  * - Health checks
@@ -73,7 +73,7 @@ export function isProviderAvailable(providerName) {
  * @returns {string}
  */
 export function getProviderName() {
-  return process.env.GLM_PROVIDER || DEFAULT_PROVIDER;
+  return process.env.ARCL_PROVIDER || DEFAULT_PROVIDER;
 }
 
 /**

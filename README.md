@@ -1,8 +1,10 @@
-# GLM CLI
+# arcl
 
-> A CLI-based coding agent that edits files via unified diffs
+> Transactional coding CLI that edits files via unified diffs
 
-GLM is a transactional filesystem mutation engine for AI-assisted coding. It operates **outside** the IDE, proposes changes as explicit diffs, and never touches files without confirmation.
+*Renamed from GLM to avoid confusion with existing GLM models.*
+
+arcl is a transactional filesystem mutation engine for AI-assisted coding. It operates **outside** the IDE, proposes changes as explicit diffs, and never touches files without confirmation.
 
 **Boring but trustworthy.**
 
@@ -10,25 +12,25 @@ GLM is a transactional filesystem mutation engine for AI-assisted coding. It ope
 
 - **Transactional edits** — Add, edit, or remove files atomically
 - **Template-based scaffolding** — Deterministic project creation from JSON templates
-- **Read-only understanding** — `glm ask` explains code without modification
-- **Change explanation** — `glm explain` describes what a change did and why
-- **Edit guardrails** — Policy-based validation via `.glm/config.json`
+- **Read-only understanding** — `arcl ask` explains code without modification
+- **Change explanation** — `arcl explain` describes what a change did and why
+- **Edit guardrails** — Policy-based validation via `.arcl/config.json`
 - **Provider fallback** — Automatic failover when primary LLM is unavailable
 - **Preview mode** — `--dry-run` shows what would happen without applying
-- **Change history** — All operations logged to `.glm/history.json`
+- **Change history** — All operations logged to `.arcl/history.json`
 - **UTF-8 everywhere** — Explicit encoding, no corruption, no BOM issues
 - **Diff-based changes** — All modifications shown as unified diffs before applying
 - **Automatic backups** — Every mutation creates a `.bak` file
 - **Rollback on failure** — Failed patches restore original content
-- **Workspace isolation** — Operations confined to `C:\glm-projects` (Windows) or `~/glm-projects`
+- **Workspace isolation** — Operations confined to `C:\arcl-projects` (Windows) or `~/arcl-projects`
 - **Multi-provider LLM** — Gemini, OpenRouter, or local (Ollama)
 
 ## Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/saxil/glm-cli.git
-cd glm-cli
+git clone https://github.com/saxil/arcl-cli.git
+cd arcl-cli
 
 # Install dependencies
 npm install
@@ -37,7 +39,7 @@ npm install
 npm link
 
 # Verify
-glm --help
+arcl --help
 ```
 
 ## Configuration
@@ -49,15 +51,12 @@ Set one of these environment variables for your LLM provider:
 $env:GEMINI_API_KEY = "your-key"
 
 # OpenRouter
-$env:GLM_PROVIDER = "openrouter"
+$env:ARCL_PROVIDER = "openrouter"
 $env:OPENROUTER_API_KEY = "your-key"
 
-# Anthropic
-$env:ANTHROPIC_API_KEY = "your-key"
-
 # Local (Ollama)
-$env:GLM_PROVIDER = "local"
-$env:GLM_LOCAL_MODEL = "codellama"  # optional
+$env:ARCL_PROVIDER = "local"
+$env:ARCL_LOCAL_MODEL = "codellama"  # optional
 ```
 
 ## Usage
@@ -66,44 +65,44 @@ $env:GLM_LOCAL_MODEL = "codellama"  # optional
 
 ```bash
 # Create a new file
-glm add main.py "hello world script"
+arcl add main.py "hello world script"
 
 # Edit an existing file
-glm edit main.py "add error handling"
+arcl edit main.py "add error handling"
 
 # Remove a file
-glm remove main.py
+arcl remove main.py
 
 # Preview without applying (dry run)
-glm edit --dry-run main.py "add logging"
-glm add --dry-run utils.py "helper functions"
+arcl edit --dry-run main.py "add logging"
+arcl add --dry-run utils.py "helper functions"
 ```
 
 ### Read-Only Mode
 
 ```bash
 # Explain code in a file
-glm ask src/main.py "explain the main function"
+arcl ask src/main.py "explain the main function"
 
 # Summarize a project
-glm ask . "summarize this project"
+arcl ask . "summarize this project"
 
 # Explain what a change did
-glm explain last
-glm explain src/main.py
+arcl explain last
+arcl explain src/main.py
 ```
 
 ### Project Creation
 
 ```bash
 # List available templates
-glm templates
+arcl templates
 
 # Create a complete project (auto-detects template)
-glm create project "a calculator app using tkinter"
+arcl create project "a calculator app using tkinter"
 
 # Preview project creation
-glm create project --dry-run "a flask REST API"
+arcl create project --dry-run "a flask REST API"
 ```
 
 This will:
@@ -118,48 +117,48 @@ This will:
 
 ```bash
 # List directory contents
-glm ls
+arcl ls
 
 # Show directory tree
-glm tree
+arcl tree
 
 # Show help
-glm --help
+arcl --help
 ```
 
 ## Example Workflow
 
 ```bash
 # Create a new project
-glm create project "a flask REST API with user authentication"
+arcl create project "a flask REST API with user authentication"
 
 # Navigate to project
-cd C:\glm-projects\flask-rest-api
+cd C:\arcl-projects\flask-rest-api
 
 # View structure
-glm tree
+arcl tree
 
 # Add a new endpoint
-glm add src/routes/products.py "CRUD endpoints for products"
+arcl add src/routes/products.py "CRUD endpoints for products"
 
 # Edit existing file
-glm edit src/main.py "add products router import"
+arcl edit src/main.py "add products router import"
 
 # Remove a file
-glm remove src/routes/old_route.py
+arcl remove src/routes/old_route.py
 ```
 
 ## Workspace
 
-GLM enforces workspace boundaries for safety:
+arcl enforces workspace boundaries for safety:
 
 | OS | Workspace Path |
 |----|----------------|
-| Windows | `C:\glm-projects` |
-| macOS | `~/Desktop/glm-projects` |
-| Linux | `~/glm-projects` |
+| Windows | `C:\arcl-projects` |
+| macOS | `~/Desktop/arcl-projects` |
+| Linux | `~/arcl-projects` |
 
-All `glm add/edit/remove` commands must operate within the workspace.
+All `arcl add/edit/remove` commands must operate within the workspace.
 
 ## Architecture
 
@@ -232,12 +231,12 @@ Available templates:
 
 Use `--template <name>` to explicitly select a template:
 ```bash
-glm create project --template python-fastapi "REST API for users"
+arcl create project --template python-fastapi "REST API for users"
 ```
 
 ## Change History
 
-All operations are logged to `.glm/history.json`:
+All operations are logged to `.arcl/history.json`:
 
 ```json
 {
@@ -254,7 +253,7 @@ History is append-only and read-only by default.
 
 ## Edit Guardrails
 
-Create `.glm/config.json` to enforce policies:
+Create `.arcl/config.json` to enforce policies:
 
 ```json
 {
@@ -276,7 +275,7 @@ Violations are rejected with clear error messages.
 
 ## Provider Fallback
 
-If the primary provider is unavailable, GLM automatically falls back:
+If the primary provider is unavailable, arcl automatically falls back:
 
 ```
 Warning: gemini unavailable, falling back to openrouter

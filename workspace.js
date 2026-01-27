@@ -1,7 +1,7 @@
 /**
  * Workspace Resolver
  * 
- * Cross-platform workspace management for GLM CLI.
+ * Cross-platform workspace management for arcl CLI.
  * Handles default locations, project initialization, and boundary enforcement.
  */
 
@@ -12,9 +12,9 @@ import os from 'os';
 /**
  * Gets the default workspace root based on OS.
  * 
- * Windows: C:\glm-projects
- * macOS:   ~/Desktop/glm-projects
- * Linux:   ~/glm-projects
+ * Windows: C:\arcl-projects
+ * macOS:   ~/Desktop/arcl-projects
+ * Linux:   ~/arcl-projects
  * 
  * @returns {string} Absolute path to workspace root
  */
@@ -24,12 +24,12 @@ export function getDefaultWorkspaceRoot() {
   
   switch (platform) {
     case 'win32':
-      return 'C:\\glm-projects';
+      return 'C:\\arcl-projects';
     case 'darwin':
-      return path.join(home, 'Desktop', 'glm-projects');
+      return path.join(home, 'Desktop', 'arcl-projects');
     default:
       // Linux and others
-      return path.join(home, 'glm-projects');
+      return path.join(home, 'arcl-projects');
   }
 }
 
@@ -181,14 +181,14 @@ export function validatePath(targetPath, options = {}) {
   if (!project.inWorkspace) {
     return { 
       valid: false, 
-      error: `Not in GLM workspace. Run commands from inside: ${project.workspaceRoot}` 
+      error: `Not in arcl workspace. Run commands from inside: ${project.workspaceRoot}` 
     };
   }
   
   if (requireProject && !project.projectPath) {
     return { 
       valid: false, 
-      error: `Not in a project. Create one with: glm init <project-name>` 
+      error: `Not in a project. Create one with: arcl init <project-name>` 
     };
   }
   
@@ -211,7 +211,7 @@ export function validatePath(targetPath, options = {}) {
 }
 
 /**
- * Lists contents of current directory (for glm ls).
+ * Lists contents of current directory (for arcl ls).
  * 
  * @param {string} [dir] - Directory to list (defaults to cwd)
  * @returns {{success: boolean, entries?: Array<{name: string, type: 'file'|'directory'}>, error?: string}}
@@ -230,7 +230,7 @@ export function listDirectory(dir = process.cwd()) {
 }
 
 /**
- * Builds a tree structure of directory (for glm tree).
+ * Builds a tree structure of directory (for arcl tree).
  * 
  * @param {string} [dir] - Root directory (defaults to cwd)
  * @param {number} [maxDepth=3] - Maximum depth to traverse

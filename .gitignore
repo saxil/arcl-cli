@@ -8,7 +8,7 @@ node_modules/
 # Logs
 *.log
 
-# Backups created by glm
+# Backups created by arcl
 *.bak
 
 # Session data

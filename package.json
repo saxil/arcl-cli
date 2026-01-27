@@ -1,10 +1,11 @@
 {
-  "name": "vibe-agent",
-  "version": "1.0.0",
-  "description": "CLI-based coding agent that edits files via unified diffs",
+  "name": "arcl-cli",
+  "version": "2.4.0",
+  "description": "Transactional coding CLI that edits files via unified diffs",
   "type": "module",
   "main": "agent.js",
   "bin": {
+    "arcl": "./agent.js",
     "glm": "./agent.js"
   },
   "scripts": {
@@ -18,7 +19,8 @@
     "coding",
     "diff",
     "llm",
-    "developer-tools"
+    "developer-tools",
+    "arcl"
   ],
   "author": "",
   "license": "MIT",

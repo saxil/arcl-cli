@@ -1,8 +1,8 @@
 /**
  * Change History Module
  * 
- * Tracks all GLM operations for traceability and debugging.
- * History is append-only, stored in .glm/history.json
+ * Tracks all arcl operations for traceability and debugging.
+ * History is append-only, stored in .arcl/history.json
  */
 
 import path from 'path';
@@ -21,14 +21,14 @@ import { getDefaultWorkspaceRoot } from './workspace.js';
  */
 
 /**
- * Gets the .glm directory path for the current context.
+ * Gets the .arcl directory path for the current context.
  * Uses workspace root for project-level history.
  * 
  * @returns {string}
  */
-export function getGlmDir() {
+export function getArclDir() {
   const workspaceRoot = getDefaultWorkspaceRoot();
-  return path.join(workspaceRoot, '.glm');
+  return path.join(workspaceRoot, '.arcl');
 }
 
 /**
@@ -37,7 +37,7 @@ export function getGlmDir() {
  * @returns {string}
  */
 export function getHistoryPath() {
-  return path.join(getGlmDir(), 'history.json');
+  return path.join(getArclDir(), 'history.json');
 }
 
 /**
@@ -46,19 +46,19 @@ export function getHistoryPath() {
  * @returns {string}
  */
 export function getBackupsDir() {
-  return path.join(getGlmDir(), 'backups');
+  return path.join(getArclDir(), 'backups');
 }
 
 /**
- * Ensures .glm directory structure exists.
+ * Ensures .arcl directory structure exists.
  * 
  * @returns {{success: boolean, error?: string}}
  */
-export function ensureGlmDir() {
-  const glmDir = getGlmDir();
+export function ensureArclDir() {
+  const arclDir = getArclDir();
   const backupsDir = getBackupsDir();
   
-  let result = ensureDir(glmDir);
+  let result = ensureDir(arclDir);
   if (!result.success) return result;
   
   result = ensureDir(backupsDir);
@@ -97,10 +97,10 @@ export function readHistory() {
  * @returns {{success: boolean, error?: string}}
  */
 export function appendHistory(entry) {
-  // Ensure .glm directory exists
-  const dirResult = ensureGlmDir();
+  // Ensure .arcl directory exists
+  const dirResult = ensureArclDir();
   if (!dirResult.success) {
-    console.error(`Warning: Could not create .glm directory: ${dirResult.error}`);
+    console.error(`Warning: Could not create .arcl directory: ${dirResult.error}`);
     return { success: false, error: dirResult.error };
   }
   
@@ -164,7 +164,7 @@ export function recordCommand({ command, files, instruction, provider, result, e
  * @returns {string}
  */
 export function getCurrentProvider() {
-  const provider = process.env.GLM_PROVIDER || 'gemini';
+  const provider = process.env.ARCL_PROVIDER || 'gemini';
   return provider;
 }
 
@@ -201,10 +201,10 @@ export function getEntriesForFile(filePath) {
 }
 
 export default {
-  getGlmDir,
+  getArclDir,
   getHistoryPath,
   getBackupsDir,
-  ensureGlmDir,
+  ensureArclDir,
   readHistory,
   appendHistory,
   recordCommand,

@@ -1,7 +1,7 @@
 /**
  * Configuration Module (v2.3)
  * 
- * User-defined guardrails via .glm/config.json
+ * User-defined guardrails via .arcl/config.json
  * 
  * Policies:
  * - allow_full_rewrites: Permit diffs that replace entire files
@@ -12,7 +12,7 @@
 
 import path from 'path';
 import { readFileUTF8, writeFileUTF8, fileExists } from './io.js';
-import { getGlmDir, ensureGlmDir } from './history.js';
+import { getArclDir, ensureArclDir } from './history.js';
 
 /**
  * @typedef {Object} Config
@@ -38,11 +38,11 @@ const DEFAULT_CONFIG = {
  * @returns {string}
  */
 export function getConfigPath() {
-  return path.join(getGlmDir(), 'config.json');
+  return path.join(getArclDir(), 'config.json');
 }
 
 /**
- * Loads configuration from .glm/config.json.
+ * Loads configuration from .arcl/config.json.
  * Returns default config if file doesn't exist.
  * 
  * @returns {{success: boolean, config?: Config, error?: string}}
@@ -75,7 +75,7 @@ export function loadConfig() {
  * @returns {{success: boolean, error?: string}}
  */
 export function initConfig() {
-  const dirResult = ensureGlmDir();
+  const dirResult = ensureArclDir();
   if (!dirResult.success) {
     return { success: false, error: dirResult.error };
   }

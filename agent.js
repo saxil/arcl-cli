@@ -1,23 +1,23 @@
 #!/usr/bin/env node
 /**
- * glm - CLI-Based Coding Agent (v2.2)
+ * arcl — Transactional Coding CLI (v2.4)
  * 
  * Transactional Commands:
- *   glm add <file> "<instruction>"
- *   glm edit <file> "<instruction>"
- *   glm remove <file>
+ *   arcl add <file> "<instruction>"
+ *   arcl edit <file> "<instruction>"
+ *   arcl remove <file>
  * 
  * Project Creation:
- *   glm create project "<description>"
+ *   arcl create project "<description>"
  * 
  * Read-Only:
- *   glm ask <path> "<question>"
+ *   arcl ask <path> "<question>"
  * 
  * Utilities:
- *   glm ls
- *   glm tree
- *   glm templates
- *   glm --help
+ *   arcl ls
+ *   arcl tree
+ *   arcl templates
+ *   arcl --help
  * 
  * Flags:
  *   --dry-run  Preview without applying changes
@@ -80,46 +80,46 @@ async function confirm(prompt) {
 
 function printHelp() {
   const workspaceRoot = getDefaultWorkspaceRoot();
-  console.log(`glm - CLI-Based Coding Agent (v2.3)
+  console.log(`arcl — Transactional Coding CLI (v2.4)
 
 TRANSACTIONAL COMMANDS (single-file, safe):
-  glm add <file> "<instruction>"     Create a new file
-  glm edit <file> "<instruction>"    Modify an existing file
-  glm remove <file>                  Delete a file
+  arcl add <file> "<instruction>"     Create a new file
+  arcl edit <file> "<instruction>"    Modify an existing file
+  arcl remove <file>                  Delete a file
 
 PROJECT CREATION (template-based):
-  glm create project "<description>"
-  glm create project --template <name> "<description>"
-  glm templates                      List available templates
+  arcl create project "<description>"
+  arcl create project --template <name> "<description>"
+  arcl templates                      List available templates
 
 READ-ONLY (understand code):
-  glm ask <path> "<question>"        Explain code without modifying
-  glm explain last                   Explain last change
-  glm explain <file>                 Explain changes to file
+  arcl ask <path> "<question>"        Explain code without modifying
+  arcl explain last                   Explain last change
+  arcl explain <file>                 Explain changes to file
 
 FLAGS:
   --dry-run                          Preview changes without applying
   --template <name>                  Use specific template for project
 
 UTILITIES:
-  glm ls                             List directory contents
-  glm tree                           Show directory tree
-  glm --help                         Show this help
+  arcl ls                             List directory contents
+  arcl tree                           Show directory tree
+  arcl --help                         Show this help
 
 EXAMPLES:
-  glm add main.py "hello world script"
-  glm edit main.py "add error handling"
-  glm edit --dry-run main.py "add logging"
-  glm ask src/main.py "explain the main function"
-  glm explain last
-  glm create project --template python-fastapi "REST API for users"
+  arcl add main.py "hello world script"
+  arcl edit main.py "add error handling"
+  arcl edit --dry-run main.py "add logging"
+  arcl ask src/main.py "explain the main function"
+  arcl explain last
+  arcl create project --template python-fastapi "REST API for users"
 
 WORKSPACE: ${workspaceRoot}
 `);
 }
 
 // ─────────────────────────────────────────────────────────────
-// glm add <file> "<instruction>" [--dry-run]
+// arcl add <file> "<instruction>" [--dry-run]
 // ─────────────────────────────────────────────────────────────
 
 async function addCommand(filePath, instruction, options = {}) {
@@ -135,7 +135,7 @@ async function addCommand(filePath, instruction, options = {}) {
 
   if (fileExists(absolutePath)) {
     console.error(`Error: File already exists: ${absolutePath}`);
-    console.error('Use "glm edit" to modify existing files.');
+    console.error('Use "arcl edit" to modify existing files.');
     return 1;
   }
 
@@ -222,7 +222,7 @@ Output the content as a unified diff that ADDS all lines to an empty file. Examp
 }
 
 // ─────────────────────────────────────────────────────────────
-// glm edit <file> "<instruction>" [--dry-run]
+// arcl edit <file> "<instruction>" [--dry-run]
 // ─────────────────────────────────────────────────────────────
 
 async function editCommand(filePath, instruction, options = {}) {
@@ -238,7 +238,7 @@ async function editCommand(filePath, instruction, options = {}) {
 
   if (!fileExists(absolutePath)) {
     console.error(`Error: File not found: ${absolutePath}`);
-    console.error('Use "glm add" to create new files.');
+    console.error('Use "arcl add" to create new files.');
     return 1;
   }
 
@@ -318,7 +318,7 @@ async function editCommand(filePath, instruction, options = {}) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// glm remove <file>
+// arcl remove <file>
 // ─────────────────────────────────────────────────────────────
 
 async function removeCommand(filePath) {
@@ -370,7 +370,7 @@ async function removeCommand(filePath) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// glm create project "<description>" [--dry-run]
+// arcl create project "<description>" [--dry-run]
 // ─────────────────────────────────────────────────────────────
 
 async function createProjectCommand(description, options = {}) {
@@ -378,8 +378,8 @@ async function createProjectCommand(description, options = {}) {
   
   if (!description) {
     console.error('Error: Project description required');
-    console.error('Usage: glm create project "<description>"');
-    console.error('       glm create project --template <name> "<description>"');
+    console.error('Usage: arcl create project "<description>"');
+    console.error('       arcl create project --template <name> "<description>"');
     return 1;
   }
 
@@ -520,7 +520,7 @@ async function createProjectCommand(description, options = {}) {
   console.log(`\nProject created: ${plan.projectPath}`);
   console.log(`\nNext steps:`);
   console.log(`  cd "${plan.projectPath}"`);
-  console.log(`  glm edit src/main.py "your changes"`);
+  console.log(`  arcl edit src/main.py "your changes"`);
   
   recordCommand({ command: 'create', files: plan.files.map(f => f.relativePath), instruction: description, provider: getCurrentProvider(), result: 'success' });
   return 0;
@@ -568,13 +568,13 @@ function getDefaultContent(relativePath, plan) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// glm ask <path> "<question>"
+// arcl ask <path> "<question>"
 // ─────────────────────────────────────────────────────────────
 
 async function askCommand(targetPath, question) {
   if (!targetPath || !question) {
     console.error('Error: Path and question required');
-    console.error('Usage: glm ask <path> "<question>"');
+    console.error('Usage: arcl ask <path> "<question>"');
     return 1;
   }
 
@@ -652,14 +652,14 @@ async function askCommand(targetPath, question) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// glm explain [last | <file>]
+// arcl explain [last | <file>]
 // ─────────────────────────────────────────────────────────────
 
 async function explainCommand(target) {
   if (!target) {
     console.error('Error: Target required');
-    console.error('Usage: glm explain last');
-    console.error('       glm explain <file>');
+    console.error('Usage: arcl explain last');
+    console.error('       arcl explain <file>');
     return 1;
   }
 
@@ -688,7 +688,7 @@ async function explainCommand(target) {
 
   if (entries.length === 0) {
     console.error(`No history found for: ${label}`);
-    console.error('Run some glm commands first to build history.');
+    console.error('Run some arcl commands first to build history.');
     return 1;
   }
 
@@ -718,7 +718,7 @@ async function explainCommand(target) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// glm ls
+// arcl ls
 // ─────────────────────────────────────────────────────────────
 
 function lsCommand() {
@@ -742,7 +742,7 @@ function lsCommand() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// glm tree
+// arcl tree
 // ─────────────────────────────────────────────────────────────
 
 function treeCommand() {
@@ -760,7 +760,7 @@ function treeCommand() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// glm templates
+// arcl templates
 // ─────────────────────────────────────────────────────────────
 
 function templatesCommand() {
@@ -814,6 +814,12 @@ async function main() {
   const rawArgs = process.argv.slice(2);
   const { args, dryRun, template } = parseFlags(rawArgs);
 
+  // Deprecation shim: warn if invoked as 'glm'
+  const invokedAs = path.basename(process.argv[1], '.js');
+  if (invokedAs === 'glm') {
+    console.error('Warning: glm is deprecated. Use arcl instead.\n');
+  }
+
   if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
     printHelp();
     return 0;
@@ -824,21 +830,21 @@ async function main() {
   switch (command) {
     case 'add':
       if (args.length < 3) {
-        console.error('Error: glm add requires <file> and "<instruction>"');
+        console.error('Error: arcl add requires <file> and "<instruction>"');
         return 1;
       }
       return await addCommand(args[1], args[2], { dryRun });
 
     case 'edit':
       if (args.length < 3) {
-        console.error('Error: glm edit requires <file> and "<instruction>"');
+        console.error('Error: arcl edit requires <file> and "<instruction>"');
         return 1;
       }
       return await editCommand(args[1], args[2], { dryRun });
 
     case 'remove':
       if (args.length < 2) {
-        console.error('Error: glm remove requires <file>');
+        console.error('Error: arcl remove requires <file>');
         return 1;
       }
       return await removeCommand(args[1]);
@@ -847,21 +853,21 @@ async function main() {
       if (args[1] === 'project') {
         return await createProjectCommand(args[2], { dryRun, template });
       }
-      console.error('Error: Unknown create target. Use: glm create project "<description>"');
+      console.error('Error: Unknown create target. Use: arcl create project "<description>"');
       return 1;
 
     case 'ask':
       if (args.length < 3) {
-        console.error('Error: glm ask requires <path> and "<question>"');
+        console.error('Error: arcl ask requires <path> and "<question>"');
         return 1;
       }
       return await askCommand(args[1], args[2]);
 
     case 'explain':
       if (args.length < 2) {
-        console.error('Error: glm explain requires <target>');
-        console.error('Usage: glm explain last');
-        console.error('       glm explain <file>');
+        console.error('Error: arcl explain requires <target>');
+        console.error('Usage: arcl explain last');
+        console.error('       arcl explain <file>');
         return 1;
       }
       return await explainCommand(args[1]);
@@ -877,7 +883,7 @@ async function main() {
 
     // Legacy compatibility
     case 'run':
-      console.error('Warning: "glm run" is deprecated in v2. Use "glm add/edit/remove" directly.');
+      console.error('Warning: "run" is deprecated. Use "arcl add/edit/remove" directly.');
       const action = args[1];
       if (action === 'add') return await addCommand(args[2], args[3], { dryRun });
       if (action === 'edit') return await editCommand(args[2], args[3], { dryRun });
@@ -885,12 +891,12 @@ async function main() {
       return 1;
 
     case 'init':
-      console.error('Warning: "glm init" is deprecated. Use "glm create project" instead.');
+      console.error('Warning: "init" is deprecated. Use "arcl create project" instead.');
       return 1;
 
     default:
       console.error(`Error: Unknown command: ${command}`);
-      console.error('Run "glm --help" for usage.');
+      console.error('Run "arcl --help" for usage.');
       return 1;
   }
 }

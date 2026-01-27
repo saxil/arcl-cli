@@ -40,7 +40,7 @@ function getApiKey() {
  * @returns {string}
  */
 function getModel() {
-  return process.env.GLM_MODEL || DEFAULT_MODEL;
+  return process.env.ARCL_MODEL || DEFAULT_MODEL;
 }
 
 /**
@@ -115,8 +115,8 @@ export async function callOpenRouter(request) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://github.com/glm-cli',
-        'X-Title': 'glm'
+        'HTTP-Referer': 'https://github.com/arcl-cli',
+        'X-Title': 'arcl'
       },
       body: JSON.stringify(body)
     });
