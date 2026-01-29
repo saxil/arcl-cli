@@ -27,6 +27,14 @@ arcl is a transactional filesystem mutation engine for AI-assisted coding. It op
 
 ## Installation
 
+### Quick Install (Windows PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/saxil/arcl-cli/main/install.ps1 | iex
+```
+
+### Manual Install
+
 ```bash
 # Clone the repository
 git clone https://github.com/saxil/arcl-cli.git
@@ -319,3 +327,19 @@ Transient errors that trigger fallback:
 ## License
 
 MIT
+
+## Install from GitHub Packages (npm)
+
+You can install arcl-cli directly from the GitHub npm registry:
+
+```bash
+npm install @saxil/arcl-cli --registry=https://npm.pkg.github.com
+```
+
+To use globally:
+
+```bash
+npm install -g @saxil/arcl-cli --registry=https://npm.pkg.github.com
+```
+
+You must be authenticated to GitHub Packages. See: https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry

@@ -1,5 +1,8 @@
 {
-  "name": "arcl-cli",
+  "name": "@saxil/arcl-cli",
+    "publishConfig": {
+      "registry": "https://npm.pkg.github.com/"
+    },
   "version": "2.4.0",
   "description": "Transactional coding CLI that edits files via unified diffs",
   "type": "module",
@@ -28,6 +31,11 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "diff-match-patch": "^1.0.5"
+    "chalk": "^5.6.2",
+    "diff-match-patch": "^1.0.5",
+    "ink": "^6.6.0",
+    "ink-spinner": "^5.0.0",
+    "ink-text-input": "^6.0.0",
+    "react": "^19.2.4"
   }
 }
